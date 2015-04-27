@@ -1,0 +1,2 @@
+ldconfig
+kldload mqueuefs || true

@@ -1,0 +1,1 @@
+-fPIC -D_REENTRANT -fstrict-aliasing -pedantic -Wall -Werror -g
