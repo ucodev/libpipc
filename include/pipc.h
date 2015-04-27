@@ -27,26 +27,21 @@
 #ifndef LIBPIPC_PIPC_H
 #define LIBPIPC_PIPC_H
 
+#include <stdio.h>
+
+/* Types */
+typedef long pipcd_t;
+
 /* Prototypes */
-int pipc_register(
-	const char *name,
-	const char *key,
-	long id,
-	size_t msgmax,
-	size_t msgsize,
-	int flags);
-int pipc_send(int pipcd, long src_id, long dst_id, const char *msg, size_t count);
-int pipc_recv(int pipcd, long id, char *msg, size_t count);
-int pipc_timedsend(
-	int pipcd,
-	long src_id,
-	long dst_id,
-	const char *msg,
-	size_t count,
-	const struct timespec *timeout);
-int pipc_timedrecv(int pipcd, long id, char *msg, size_t count, const struct timespec *timeout);
-int pipc_unregister(int pipcd);
-int pipc_unlink(const char *name);
+pipcd_t pipc_create(const char *key, size_t msgmax, size_t msgsize, mode_t mode);
+pipcd_t pipc_register(const char *key, long id, mode_t mode);
+int pipc_send(pipcd_t pipcd, long src_id, long dst_id, const char *msg, size_t count);
+int pipc_recv(pipcd_t pipcd, long id, char *msg, size_t count);
+int pipc_send_nowait(pipcd_t pipcd, long src_id, long dst_id, const char *msg, size_t count);
+int pipc_recv_nowait(pipcd_t pipcd, long id, char *msg, size_t count);
+int pipc_unregister(pipcd_t pipcd);
+int pipc_destroy(pipcd_t pipcd);
+int pipc_unlink(const char *key);
 
 #endif
 
