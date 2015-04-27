@@ -37,6 +37,14 @@ int pipc_register(
 	int flags);
 int pipc_send(int pipcd, long src_id, long dst_id, const char *msg, size_t count);
 int pipc_recv(int pipcd, long id, char *msg, size_t count);
+int pipc_timedsend(
+	int pipcd,
+	long src_id,
+	long dst_id,
+	const char *msg,
+	size_t count,
+	const struct timespec *timeout);
+int pipc_timedrecv(int pipcd, long id, char *msg, size_t count, const struct timespec *timeout);
 int pipc_unregister(int pipcd);
 int pipc_unlink(const char *name);
 

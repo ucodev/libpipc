@@ -15,6 +15,8 @@ all:
 
 install_all:
 	cd src && make install && cd ..
+	mkdir -p ${SYSINCLUDEDIR}/pipc
+	cp include/* ${SYSINCLUDEDIR}/pipc/
 
 clean:
 	cd src && make clean && cd ..

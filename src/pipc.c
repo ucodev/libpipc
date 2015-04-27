@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <errno.h>
+#include <time.h>
 
 int pipc_register(
 	const char *name,
@@ -20,6 +21,23 @@ int pipc_send(int pipcd, long src_id, long dst_id, const char *msg, size_t count
 }
 
 int pipc_recv(int pipcd, long id, char *msg, size_t count) {
+	errno = ENOSYS;
+	return -1;
+}
+
+int pipc_timedsend(
+	int pipcd,
+	long src_id,
+	long dst_id,
+	const char *msg,
+	size_t count,
+	const struct timespec *timeout)
+{
+	errno = ENOSYS;
+	return -1;
+}
+
+int pipc_timedrecv(int pipcd, long id, char *msg, size_t count, const struct timespec *timeout) {
 	errno = ENOSYS;
 	return -1;
 }
