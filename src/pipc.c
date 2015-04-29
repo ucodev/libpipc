@@ -26,6 +26,7 @@
 
 
 #include <stdio.h>
+#include <string.h>
 #include <stdint.h>
 #include <errno.h>
 #include <time.h>
@@ -52,9 +53,24 @@ static pipcd_t *_pipc_create(
 	if (!(pipcd = mm_alloc(sizeof(pipcd_t))))
 		return NULL;
 
+	/* Reset descriptor memory */
+	memset(pipcd, 0, sizeof(pipcd_t));
+
+	/* Allocate descriptor buffer */
+	if (!(pipcd->buf = mm_alloc(sizeof(long) + msgsize))) {
+		errsv = errno;
+		mm_free(pipcd);
+		errno = errsv;
+		return NULL;
+	}
+
+	/* Reset buffer memory */
+	memset(pipcd->buf, 0, sizeof(long) + msgsize);
+
 	/* Create the IPC engine */
 	if ((pipcd->d = msgget((key_t) key, flags | mode)) < 0) {
 		errsv = errno;
+		mm_free(pipcd->buf);
 		mm_free(pipcd);
 		errno = errsv;
 		return NULL;

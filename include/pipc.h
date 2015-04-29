@@ -39,6 +39,7 @@ typedef struct pipcd_struct {
 	size_t msgmax;
 	size_t msgsize;
 	mode_t mode;
+	char *buf;
 } pipcd_t;
 
 /* Prototypes */
