@@ -232,7 +232,7 @@ int pipc_slave_unregister(pipcd_t *pipcd) {
 	return 0;
 }
 
-size_t pipc_pending(pipcd_t *pipcd) {
+int pipc_pending(pipcd_t *pipcd) {
 	struct msqid_ds qctl;
 
 	/* Reset IPC message queue structure */
