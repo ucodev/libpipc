@@ -50,6 +50,7 @@ ssize_t pipc_send_nowait(pipcd_t *pipcd, long src_id, long dst_id, const char *m
 ssize_t pipc_recv_nowait(pipcd_t *pipcd, long *src_id, long *dst_id, char *msg, size_t count);
 int pipc_master_unregister(pipcd_t *pipcd);
 int pipc_slave_unregister(pipcd_t *pipcd);
+size_t pipc_pending(pipcd_t *pipcd);
 
 #endif
 

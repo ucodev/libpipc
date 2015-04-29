@@ -232,3 +232,17 @@ int pipc_slave_unregister(pipcd_t *pipcd) {
 	return 0;
 }
 
+size_t pipc_pending(pipcd_t *pipcd) {
+	struct msqid_ds qctl;
+
+	/* Reset IPC message queue structure */
+	memset(&qctl, 0, sizeof(struct msqid_ds));
+
+	/* Get IPC properties */
+	if (msgctl(pipcd->d, IPC_STAT, &qctl) < 0)
+		return -1;
+
+	/* Return the number of messages in queue */
+	return qctl.msg_qnum;
+}
+
