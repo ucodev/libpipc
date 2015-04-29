@@ -39,16 +39,15 @@ typedef struct pipcd_struct {
 	size_t msgmax;
 	size_t msgsize;
 	mode_t mode;
-	char *buf;
 } pipcd_t;
 
 /* Prototypes */
 pipcd_t *pipc_master_register(pipck_t key, long id, size_t msgmax, size_t msgsize, mode_t mode);
 pipcd_t *pipc_slave_register(pipck_t key, long id, size_t msgmax, size_t msgsize, mode_t mode);
-int pipc_send(pipcd_t *pipcd, long src_id, long dst_id, const char *msg, size_t count);
-int pipc_recv(pipcd_t *pipcd, long *src_id, char *msg, size_t count);
-int pipc_send_nowait(pipcd_t *pipcd, long src_id, long dst_id, const char *msg, size_t count);
-int pipc_recv_nowait(pipcd_t *pipcd, long *src_id, char *msg, size_t count);
+ssize_t pipc_send(pipcd_t *pipcd, long src_id, long dst_id, const char *msg, size_t count);
+ssize_t pipc_recv(pipcd_t *pipcd, long *src_id, long *dst_id, char *msg, size_t count);
+ssize_t pipc_send_nowait(pipcd_t *pipcd, long src_id, long dst_id, const char *msg, size_t count);
+ssize_t pipc_recv_nowait(pipcd_t *pipcd, long *src_id, long *dst_id, char *msg, size_t count);
 int pipc_master_unregister(pipcd_t *pipcd);
 int pipc_slave_unregister(pipcd_t *pipcd);
 

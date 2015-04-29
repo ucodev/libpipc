@@ -48,6 +48,9 @@ static pipcd_t *_pipc_create(
 {
 	int errsv = 0;
 	pipcd_t *pipcd = NULL;
+	struct msqid_ds qctl;
+
+	memset(&qctl, 0, sizeof(struct msqid_ds));
 
 	/* Allocate IPC descriptor structure */
 	if (!(pipcd = mm_alloc(sizeof(pipcd_t))))
@@ -56,21 +59,9 @@ static pipcd_t *_pipc_create(
 	/* Reset descriptor memory */
 	memset(pipcd, 0, sizeof(pipcd_t));
 
-	/* Allocate descriptor buffer */
-	if (!(pipcd->buf = mm_alloc(sizeof(long) + msgsize))) {
-		errsv = errno;
-		mm_free(pipcd);
-		errno = errsv;
-		return NULL;
-	}
-
-	/* Reset buffer memory */
-	memset(pipcd->buf, 0, sizeof(long) + msgsize);
-
 	/* Create the IPC engine */
 	if ((pipcd->d = msgget((key_t) key, flags | mode)) < 0) {
 		errsv = errno;
-		mm_free(pipcd->buf);
 		mm_free(pipcd);
 		errno = errsv;
 		return NULL;
@@ -81,6 +72,25 @@ static pipcd_t *_pipc_create(
 	pipcd->msgmax = msgmax;
 	pipcd->msgsize = msgsize;
 	pipcd->mode = mode;
+
+	/* Get IPC properties */
+	if (msgctl(pipcd->d, IPC_STAT, &qctl) < 0) {
+		errsv = errno;
+		mm_free(pipcd);
+		errno = errsv;
+		return NULL;
+	}
+
+	/* Change the queue size */
+	qctl.msg_qbytes = msgmax * msgsize;
+
+	/* Set the new queue size */
+	if (msgctl(pipcd->d, IPC_SET, &qctl) < 0) {
+		errsv = errno;
+		mm_free(pipcd);
+		errno = errsv;
+		return NULL;
+	}
 
 	/* All good */
 	return pipcd;
@@ -94,33 +104,145 @@ pipcd_t *pipc_slave_register(pipck_t key, long id, size_t msgmax, size_t msgsize
 	return _pipc_create(key, id, msgmax, msgsize, mode, 0);
 }
 
-int pipc_send(pipcd_t *pipcd, long src_id, long dst_id, const char *msg, size_t count) {
-	errno = ENOSYS;
-	return -1;
+static ssize_t _pipc_generic_send(
+	pipcd_t *pipcd,
+	long src_id,
+	long dst_id,
+	const char *msg,
+	size_t count,
+	int flags)
+{
+	int errsv = 0;
+	char *buf = NULL;
+	struct msgbuf *msg_buf = NULL;
+
+	/* Allocate transmission buffer */
+	if (!(buf = mm_alloc(sizeof(msg_buf->mtype) + sizeof(src_id) + count)))
+		return -1;
+
+	/* Craft transmission buffer */
+	msg_buf = (struct msgbuf *) buf;
+	msg_buf->mtype = dst_id;
+	memcpy(msg_buf + sizeof(msg_buf->mtype), &src_id, sizeof(src_id));
+	memcpy(msg_buf + sizeof(msg_buf->mtype) + sizeof(long), msg, count);
+
+	/* Send message */
+	if (msgsnd(pipcd->d, buf, sizeof(msg_buf->mtype) + sizeof(long) + count, flags) < 0) {
+		errsv = errno;
+		mm_free(buf);
+		errno = errsv;
+		return -1;
+	}
+
+	/* Reset buffer memory */
+	memset(buf, 0, sizeof(msg_buf->mtype) + sizeof(long) + count);
+
+	/* Free buffer memory */
+	mm_free(buf);
+
+	/* All good */
+	return count;
 }
 
-int pipc_recv(pipcd_t *pipcd, long *src_id, char *msg, size_t count) {
-	errno = ENOSYS;
-	return -1;
+static ssize_t _pipc_generic_recv(
+	pipcd_t *pipcd,
+	long *src_id,
+	long *dst_id,
+	char *msg,
+	size_t count,
+	int flags)
+{
+	int errsv = 0;
+	char *buf = NULL;
+	struct msgbuf *msg_buf = NULL;
+
+	/* Allocate transmission buffer */
+	if (!(buf = mm_alloc(sizeof(msg_buf->mtype) + sizeof(src_id) + count)))
+		return -1;
+
+	/* Set msg buffer pointer */
+	msg_buf = (struct msgbuf *) buf;
+
+	/* Receive message */
+	if (msgrcv(pipcd->d, buf, sizeof(msg_buf->mtype) + sizeof(long) + count, *dst_id, flags) < 0) {
+		errsv = errno;
+		mm_free(buf);
+		errno = errsv;
+		return -1;
+	}
+
+	/* Set message type */
+	*dst_id = msg_buf->mtype;
+	memcpy(src_id, buf + sizeof(msg_buf->mtype), sizeof(long));
+	memcpy(msg, buf + sizeof(msg_buf->mtype) + sizeof(long), count);
+
+	/* Reset buffer memory */
+	memset(buf, 0, sizeof(msg_buf->mtype) + sizeof(long) + count);
+
+	/* Free buffer memory */
+	mm_free(buf);
+
+	/* All good */
+	return count;
 }
 
-int pipc_send_nowait(pipcd_t *pipcd, long src_id, long dst_id, const char *msg, size_t count) {
-	errno = ENOSYS;
-	return -1;
+ssize_t pipc_send(pipcd_t *pipcd, long src_id, long dst_id, const char *msg, size_t count) {
+	return _pipc_generic_send(pipcd, src_id, dst_id, msg, count, MSG_NOERROR);
 }
 
-int pipc_recv_nowait(pipcd_t *pipcd, long *src_id, char *msg, size_t count) {
-	errno = ENOSYS;
-	return -1;
+ssize_t pipc_recv(pipcd_t *pipcd, long *src_id, long *dst_id, char *msg, size_t count) {
+	return _pipc_generic_recv(pipcd, src_id, dst_id, msg, count, MSG_NOERROR);
+}
+
+ssize_t pipc_send_nowait(pipcd_t *pipcd, long src_id, long dst_id, const char *msg, size_t count) {
+	return _pipc_generic_send(pipcd, src_id, dst_id, msg, count, MSG_NOERROR | IPC_NOWAIT);
+}
+
+ssize_t pipc_recv_nowait(pipcd_t *pipcd, long *src_id, long *dst_id, char *msg, size_t count) {
+	return _pipc_generic_recv(pipcd, src_id, dst_id, msg, count, MSG_NOERROR | IPC_NOWAIT);
 }
 
 int pipc_master_unregister(pipcd_t *pipcd) {
-	errno = ENOSYS;
-	return -1;
+	struct msqid_ds qctl;
+
+	/* Reset IPC message queue structure */
+	memset(&qctl, 0, sizeof(struct msqid_ds));
+
+	/* Get IPC properties */
+	if (msgctl(pipcd->d, IPC_STAT, &qctl) < 0)
+		return -1;
+
+	/* Remove the IPC descriptor */
+	if (msgctl(pipcd->d, IPC_RMID, &qctl) < 0)
+		return -1;
+
+	/* Reset IPC descriptor structure memory */
+	memset(pipcd, 0, sizeof(pipcd_t));
+
+	/* Free IPC descriptor structure memory */
+	mm_free(pipcd);
+
+	/* All good */
+	return 0;
 }
 
 int pipc_slave_unregister(pipcd_t *pipcd) {
-	errno = ENOSYS;
-	return -1;
+	struct msqid_ds qctl;
+
+	/* Reset IPC message queue structure */
+	memset(&qctl, 0, sizeof(struct msqid_ds));
+
+	/* Get IPC properties */
+	if (msgctl(pipcd->d, IPC_STAT, &qctl) < 0)
+		return -1;
+
+	/* Reset IPC descriptor structure memory */
+	memset(pipcd, 0, sizeof(pipcd_t));
+
+	/* Free IPC descriptor structure memory */
+	mm_free(pipcd);
+
+	/* All good */
+	return 0;
 }
 
