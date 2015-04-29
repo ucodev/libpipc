@@ -114,20 +114,18 @@ static ssize_t _pipc_generic_send(
 {
 	int errsv = 0;
 	char *buf = NULL;
-	struct msgbuf *msg_buf = NULL;
 
 	/* Allocate transmission buffer */
-	if (!(buf = mm_alloc(sizeof(msg_buf->mtype) + sizeof(src_id) + count)))
+	if (!(buf = mm_alloc(sizeof(long) + sizeof(long) + count)))
 		return -1;
 
 	/* Craft transmission buffer */
-	msg_buf = (struct msgbuf *) buf;
-	msg_buf->mtype = dst_id;
-	memcpy(msg_buf + sizeof(msg_buf->mtype), &src_id, sizeof(src_id));
-	memcpy(msg_buf + sizeof(msg_buf->mtype) + sizeof(long), msg, count);
+	memcpy(buf, &dst_id, sizeof(long));
+	memcpy(buf + sizeof(long), &src_id, sizeof(long));
+	memcpy(buf + sizeof(long) + sizeof(long), msg, count);
 
 	/* Send message */
-	if (msgsnd(pipcd->d, buf, sizeof(msg_buf->mtype) + sizeof(long) + count, flags) < 0) {
+	if (msgsnd(pipcd->d, buf, sizeof(long) + count, flags) < 0) {
 		errsv = errno;
 		mm_free(buf);
 		errno = errsv;
@@ -135,7 +133,7 @@ static ssize_t _pipc_generic_send(
 	}
 
 	/* Reset buffer memory */
-	memset(buf, 0, sizeof(msg_buf->mtype) + sizeof(long) + count);
+	memset(buf, 0, sizeof(long) + sizeof(long) + count);
 
 	/* Free buffer memory */
 	mm_free(buf);
@@ -154,17 +152,14 @@ static ssize_t _pipc_generic_recv(
 {
 	int errsv = 0;
 	char *buf = NULL;
-	struct msgbuf *msg_buf = NULL;
+	ssize_t count_ret = 0;
 
 	/* Allocate transmission buffer */
-	if (!(buf = mm_alloc(sizeof(msg_buf->mtype) + sizeof(src_id) + count)))
+	if (!(buf = mm_alloc(sizeof(long) + sizeof(long) + count)))
 		return -1;
 
-	/* Set msg buffer pointer */
-	msg_buf = (struct msgbuf *) buf;
-
 	/* Receive message */
-	if (msgrcv(pipcd->d, buf, sizeof(msg_buf->mtype) + sizeof(long) + count, *dst_id, flags) < 0) {
+	if ((count_ret = msgrcv(pipcd->d, buf, sizeof(long) + count, *dst_id, flags)) < 0) {
 		errsv = errno;
 		mm_free(buf);
 		errno = errsv;
@@ -172,18 +167,18 @@ static ssize_t _pipc_generic_recv(
 	}
 
 	/* Set message type */
-	*dst_id = msg_buf->mtype;
-	memcpy(src_id, buf + sizeof(msg_buf->mtype), sizeof(long));
-	memcpy(msg, buf + sizeof(msg_buf->mtype) + sizeof(long), count);
+	memcpy(dst_id, buf, sizeof(long));
+	memcpy(src_id, buf + sizeof(long), sizeof(long));
+	memcpy(msg, buf + sizeof(long) + sizeof(long), count_ret);
 
 	/* Reset buffer memory */
-	memset(buf, 0, sizeof(msg_buf->mtype) + sizeof(long) + count);
+	memset(buf, 0, sizeof(long) + sizeof(long) + count);
 
 	/* Free buffer memory */
 	mm_free(buf);
 
 	/* All good */
-	return count;
+	return count_ret;
 }
 
 ssize_t pipc_send(pipcd_t *pipcd, long src_id, long dst_id, const char *msg, size_t count) {
@@ -227,15 +222,6 @@ int pipc_master_unregister(pipcd_t *pipcd) {
 }
 
 int pipc_slave_unregister(pipcd_t *pipcd) {
-	struct msqid_ds qctl;
-
-	/* Reset IPC message queue structure */
-	memset(&qctl, 0, sizeof(struct msqid_ds));
-
-	/* Get IPC properties */
-	if (msgctl(pipcd->d, IPC_STAT, &qctl) < 0)
-		return -1;
-
 	/* Reset IPC descriptor structure memory */
 	memset(pipcd, 0, sizeof(pipcd_t));
 
