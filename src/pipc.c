@@ -116,13 +116,13 @@ static ssize_t _pipc_generic_send(
 	char *buf = NULL;
 
 	/* Allocate transmission buffer */
-	if (!(buf = mm_alloc(sizeof(long) + sizeof(long) + count)))
+	if (!(buf = mm_alloc((sizeof(long) * 2) + count)))
 		return -1;
 
 	/* Craft transmission buffer */
 	memcpy(buf, &dst_id, sizeof(long));
 	memcpy(buf + sizeof(long), &src_id, sizeof(long));
-	memcpy(buf + sizeof(long) + sizeof(long), msg, count);
+	memcpy(buf + (sizeof(long) * 2), msg, count);
 
 	/* Send message */
 	if (msgsnd(pipcd->d, buf, sizeof(long) + count, flags) < 0) {
@@ -133,7 +133,7 @@ static ssize_t _pipc_generic_send(
 	}
 
 	/* Reset buffer memory */
-	memset(buf, 0, sizeof(long) + sizeof(long) + count);
+	memset(buf, 0, (sizeof(long) * 2) + count);
 
 	/* Free buffer memory */
 	mm_free(buf);
@@ -155,7 +155,7 @@ static ssize_t _pipc_generic_recv(
 	ssize_t count_ret = 0;
 
 	/* Allocate transmission buffer */
-	if (!(buf = mm_alloc(sizeof(long) + sizeof(long) + count)))
+	if (!(buf = mm_alloc((sizeof(long) * 2) + count)))
 		return -1;
 
 	/* Receive message */
@@ -169,16 +169,16 @@ static ssize_t _pipc_generic_recv(
 	/* Set message type */
 	memcpy(dst_id, buf, sizeof(long));
 	memcpy(src_id, buf + sizeof(long), sizeof(long));
-	memcpy(msg, buf + sizeof(long) + sizeof(long), count_ret);
+	memcpy(msg, buf + (sizeof(long) * 2), count_ret);
 
 	/* Reset buffer memory */
-	memset(buf, 0, sizeof(long) + sizeof(long) + count);
+	memset(buf, 0, (sizeof(long) * 2) + count);
 
 	/* Free buffer memory */
 	mm_free(buf);
 
 	/* All good */
-	return count_ret;
+	return count_ret - sizeof(long);
 }
 
 ssize_t pipc_send(pipcd_t *pipcd, long src_id, long dst_id, const char *msg, size_t count) {
