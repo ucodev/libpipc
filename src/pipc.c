@@ -7,23 +7,22 @@
  * 
  * Copyright 2015 Pedro A. Hortas (pah@ucodev.org)
  *
- * This file is part of libpall.
+ * This file is part of libpipc.
  *
- * libpall is free software: you can redistribute it and/or modify
+ * libpipc is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * libpall is distributed in the hope that it will be useful,
+ * libpipc is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with libpall.  If not, see <http://www.gnu.org/licenses/>.
+ * along with libpipc.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-
 
 
 #include <stdio.h>
@@ -84,7 +83,7 @@ int pipc_send(pipcd_t *pipcd, long src_id, long dst_id, const char *msg, size_t 
 	return -1;
 }
 
-int pipc_recv(pipcd_t *pipcd, long id, char *msg, size_t count) {
+int pipc_recv(pipcd_t *pipcd, long *src_id, char *msg, size_t count) {
 	errno = ENOSYS;
 	return -1;
 }
@@ -94,7 +93,7 @@ int pipc_send_nowait(pipcd_t *pipcd, long src_id, long dst_id, const char *msg, 
 	return -1;
 }
 
-int pipc_recv_nowait(pipcd_t *pipcd, long id, char *msg, size_t count) {
+int pipc_recv_nowait(pipcd_t *pipcd, long *src_id, char *msg, size_t count) {
 	errno = ENOSYS;
 	return -1;
 }
