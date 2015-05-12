@@ -3,7 +3,7 @@
  * @brief Portable IPC Library
  *        Public Library interface header
  *
- * Date: 29-04-2015
+ * Date: 12-05-2015
  * 
  * Copyright 2015 Pedro A. Hortas (pah@ucodev.org)
  *
@@ -28,6 +28,8 @@
 #define LIBPIPC_PIPC_H
 
 #include <stdio.h>
+
+#include <sys/types.h>
 
 /* Types */
 typedef unsigned short pipck_t;
