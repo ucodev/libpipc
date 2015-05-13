@@ -3,7 +3,7 @@
  * @brief Potable IPC Library (libpipc)
  *        Public Library interface
  *
- * Date: 29-04-2015
+ * Date: 13-05-2015
  * 
  * Copyright 2015 Pedro A. Hortas (pah@ucodev.org)
  *
@@ -43,6 +43,8 @@ static pipcd_t *_pipc_create(
 	long id,
 	size_t msgmax,
 	size_t msgsize,
+	uid_t uid,
+	gid_t gid,
 	mode_t mode,
 	int flags)
 {
@@ -67,41 +69,53 @@ static pipcd_t *_pipc_create(
 		return NULL;
 	}
 
-	/* Set the IPC parameters */
-	pipcd->key = key;
-	pipcd->msgmax = msgmax;
-	pipcd->msgsize = msgsize;
-	pipcd->mode = mode;
+	if (flags & IPC_CREAT) {
+		/* Set the IPC parameters */
+		pipcd->key = key;
+		pipcd->msgmax = msgmax;
+		pipcd->msgsize = msgsize;
+		pipcd->mode = mode;
 
-	/* Get IPC properties */
-	if (msgctl(pipcd->d, IPC_STAT, &qctl) < 0) {
-		errsv = errno;
-		mm_free(pipcd);
-		errno = errsv;
-		return NULL;
-	}
+		/* Get IPC properties */
+		if (msgctl(pipcd->d, IPC_STAT, &qctl) < 0) {
+			errsv = errno;
+			mm_free(pipcd);
+			errno = errsv;
+			return NULL;
+		}
 
-	/* Change the queue size */
-	qctl.msg_qbytes = msgmax * msgsize;
+		/* Change the queue size */
+		qctl.msg_perm.uid = uid;
+		qctl.msg_perm.gid = gid;
+		qctl.msg_qbytes = msgmax * msgsize;
 
-	/* Set the new queue size */
-	if (msgctl(pipcd->d, IPC_SET, &qctl) < 0) {
-		errsv = errno;
-		mm_free(pipcd);
-		errno = errsv;
-		return NULL;
+		/* Set the new queue size */
+		if (msgctl(pipcd->d, IPC_SET, &qctl) < 0) {
+			errsv = errno;
+			mm_free(pipcd);
+			errno = errsv;
+			return NULL;
+		}
 	}
 
 	/* All good */
 	return pipcd;
 }
 
-pipcd_t *pipc_master_register(pipck_t key, long id, size_t msgmax, size_t msgsize, mode_t mode) {
-	return _pipc_create(key, id, msgmax, msgsize, mode, IPC_CREAT);
+pipcd_t *pipc_master_register(
+	pipck_t key,
+	long id,
+	size_t msgmax,
+	size_t msgsize,
+	uid_t uid,
+	gid_t gid,
+	mode_t mode)
+{
+	return _pipc_create(key, id, msgmax, msgsize, uid, gid, mode, IPC_CREAT);
 }
 
 pipcd_t *pipc_slave_register(pipck_t key, long id, size_t msgmax, size_t msgsize, mode_t mode) {
-	return _pipc_create(key, id, msgmax, msgsize, mode, 0);
+	return _pipc_create(key, id, msgmax, msgsize, 0, 0, mode, 0);
 }
 
 static ssize_t _pipc_generic_send(

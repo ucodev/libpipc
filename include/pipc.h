@@ -3,7 +3,7 @@
  * @brief Portable IPC Library
  *        Public Library interface header
  *
- * Date: 12-05-2015
+ * Date: 13-05-2015
  * 
  * Copyright 2015 Pedro A. Hortas (pah@ucodev.org)
  *
@@ -44,7 +44,7 @@ typedef struct pipcd_struct {
 } pipcd_t;
 
 /* Prototypes */
-pipcd_t *pipc_master_register(pipck_t key, long id, size_t msgmax, size_t msgsize, mode_t mode);
+pipcd_t *pipc_master_register(pipck_t key, long id, size_t msgmax, size_t msgsize, uid_t uid, gid_t gid, mode_t mode);
 pipcd_t *pipc_slave_register(pipck_t key, long id, size_t msgmax, size_t msgsize, mode_t mode);
 ssize_t pipc_send(pipcd_t *pipcd, long src_id, long dst_id, const char *msg, size_t count);
 ssize_t pipc_recv(pipcd_t *pipcd, long *src_id, long *dst_id, char *msg, size_t count);
